@@ -1,0 +1,228 @@
+---
+- name: Bootstrap server (Docker + Nginx + Certbot + Keycloak + Swap)
+  hosts: all
+  become: true
+  vars:
+    deploy_user: ubuntu
+    domains:
+      - { domain: "lms-dev-api.duckdns.org",  port: 8081 }
+      - { domain: "agri-dev-api.duckdns.org", port: 8082 }
+      - { domain: "auth-dev-api.duckdns.org",     port: 8080 }
+    auth_domain: "auth-dev-api.duckdns.org"
+    cert_name: "{{ domains[0].domain }}"
+    cert_domain_args: "{{ domains | map(attribute='domain') | map('regex_replace', '^', '-d ') | join(' ') }}"
+    kc_admin_user: "admin"
+    cert_email: "{{ lookup('env', 'CERT_EMAIL') }}"
+    kc_db_password: "{{ lookup('env', 'KC_DB_PASSWORD') }}"
+    kc_admin_password: "{{ lookup('env', 'KC_ADMIN_PASSWORD') }}"
+    ghcr_username: "{{ lookup('env', 'GHCR_USERNAME') }}"
+    ghcr_pat: "{{ lookup('env', 'GHCR_PAT') }}"
+
+  pre_tasks:
+    - name: Check required variables
+      ansible.builtin.assert:
+        that:
+          - cert_email | length > 0
+          - kc_db_password | length >= 12
+          - kc_admin_password | length >= 12
+          - ghcr_pat | length > 0
+        fail_msg: "Missing required environment variables"
+
+  tasks:
+    # ===== Swap (prevent OOM for 12GB VM running ~8.5GB total containers) =====
+    - name: Check existing swap
+      ansible.builtin.command: swapon --show
+      register: swapon
+      changed_when: false
+
+    - name: Create 2GB swap
+      ansible.builtin.shell: |
+        fallocate -l 2G /swapfile
+        chmod 600 /swapfile
+        mkswap /swapfile
+        swapon /swapfile
+        echo '/swapfile none swap sw 0 0' >> /etc/fstab
+        sysctl -w vm.swappiness=10
+        echo 'vm.swappiness=10' >> /etc/sysctl.conf
+      when: swapon.stdout == ""
+      args:
+        creates: /swapfile
+
+    # ===== Base packages =====
+    - name: Install base packages + nginx + certbot
+      ansible.builtin.apt:
+        name: [ca-certificates, curl, gnupg, rsync, nginx, certbot]
+        state: present
+        update_cache: true
+        lock_timeout: 300
+
+    - name: Install Docker
+      ansible.builtin.shell:
+        cmd: curl -fsSL https://get.docker.com | sh
+        creates: /usr/bin/docker
+
+    - name: Docker log rotation + storage driver
+      ansible.builtin.copy:
+        dest: /etc/docker/daemon.json
+        content: |
+          {"log-driver": "json-file", "log-opts": {"max-size": "10m", "max-file": "3"}}
+        mode: "0644"
+      notify: restart docker
+
+    - name: Enable services
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop: [docker, nginx]
+
+    - name: Apply Docker configuration
+      ansible.builtin.meta: flush_handlers
+
+    # ===== Firewall (iptables for OCI Ubuntu image) =====
+    - name: Open ports 80/443 in iptables
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: "{{ item }}"
+        ctstate: [NEW]
+        jump: ACCEPT
+        action: insert
+        rule_num: "6"
+        comment: "allow tcp/{{ item }}"
+      loop: ["80", "443"]
+      register: fw
+
+    - name: Save iptables rules
+      ansible.builtin.command: netfilter-persistent save
+      when: fw.changed
+
+    # ===== Nginx =====
+    - name: Remove default nginx site
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify: reload nginx
+
+    - name: Create dirs
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ item.owner | default('root') }}"
+        mode: "0755"
+      loop:
+        - { path: /opt/keycloak }
+        - { path: /opt/lms,       owner: "{{ deploy_user }}" }
+        - { path: /opt/agrichain, owner: "{{ deploy_user }}" }
+        - { path: /opt/backups,   owner: "{{ deploy_user }}" }
+        - { path: /var/www/certbot }
+      loop_control: { label: "{{ item.path }}" }
+
+    - name: Deploy default health vhost
+      ansible.builtin.template:
+        src: health.conf.j2
+        dest: /etc/nginx/sites-available/00-health
+        mode: "0644"
+      notify: reload nginx
+
+    - name: Check if certificate exists
+      ansible.builtin.stat:
+        path: "/etc/letsencrypt/live/{{ cert_name }}/fullchain.pem"
+      register: cert
+
+    - name: Deploy proxy vhosts (HTTP before certificate exists)
+      ansible.builtin.template:
+        src: vhost.conf.j2
+        dest: "/etc/nginx/sites-available/{{ item.domain }}"
+        mode: "0644"
+      vars:
+        tls: "{{ cert.stat.exists }}"
+      loop: "{{ domains }}"
+      loop_control: { label: "{{ item.domain }}" }
+      notify: reload nginx
+
+    - name: Enable sites
+      ansible.builtin.file:
+        src: "/etc/nginx/sites-available/{{ item }}"
+        dest: "/etc/nginx/sites-enabled/{{ item }}"
+        state: link
+      loop: "{{ ['00-health'] + (domains | map(attribute='domain') | list) }}"
+      notify: reload nginx
+
+    - name: Reload nginx (for certbot challenge)
+      ansible.builtin.meta: flush_handlers
+
+    # ===== Docker login GHCR =====
+    - name: Login to GHCR (for docker compose pull)
+      community.docker.docker_login:
+        registry_url: ghcr.io
+        username: "{{ ghcr_username }}"
+        password: "{{ ghcr_pat }}"
+        reauthorize: true
+
+    # ===== Keycloak =====
+    - name: Deploy keycloak .env + compose
+      ansible.builtin.template:
+        src: "{{ item.src }}"
+        dest: "/opt/keycloak/{{ item.dest }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { src: keycloak.env.j2,         dest: .env,               mode: "0600" }
+        - { src: keycloak-compose.yml.j2, dest: docker-compose.yml, mode: "0644" }
+      loop_control: { label: "{{ item.dest }}" }
+
+    - name: Start keycloak
+      ansible.builtin.command: docker compose up -d
+      args: { chdir: /opt/keycloak }
+      register: kc_up
+      changed_when: "'Started' in kc_up.stderr or 'Created' in kc_up.stderr or 'Recreated' in kc_up.stderr"
+
+    - name: Wait keycloak ready (management port 9000)
+      ansible.builtin.uri:
+        url: http://127.0.0.1:9000/health/ready
+        status_code: 200
+      register: kc
+      until: kc.status == 200
+      retries: 60
+      delay: 5
+
+    # ===== Let's Encrypt =====
+    - name: Issue Let's Encrypt SAN certificate (webroot)
+      ansible.builtin.command: >
+        certbot certonly --webroot -w /var/www/certbot -n --agree-tos
+        -m {{ cert_email }} --cert-name {{ cert_name }}
+        --deploy-hook "systemctl reload nginx"
+        {{ cert_domain_args }}
+      args:
+        creates: "/etc/letsencrypt/live/{{ cert_name }}/fullchain.pem"
+
+    - name: Deploy HTTPS vhosts
+      ansible.builtin.template:
+        src: vhost.conf.j2
+        dest: "/etc/nginx/sites-available/{{ item.domain }}"
+        mode: "0644"
+      vars:
+        tls: true
+      loop: "{{ domains }}"
+      loop_control: { label: "{{ item.domain }}" }
+      notify: reload nginx
+
+    - name: Enable and start certbot.timer (auto-renewal)
+      ansible.builtin.systemd:
+        name: certbot.timer
+        enabled: true
+        state: started
+
+    # ===== Monitoring =====
+    - name: Cron ping Healthchecks.io every 5 minutes (liveness check)
+      ansible.builtin.cron:
+        name: healthchecks-ping
+        minute: "*/5"
+        job: "curl -fsS --retry 3 {{ lookup('env', 'HEALTHCHECKS_URL') | default('https://hc-ping.com/YOUR_UUID', true) }} > /dev/null"
+      when: lookup('env', 'HEALTHCHECKS_URL') | default('', true) | length > 0
+
+  handlers:
+    - name: reload nginx
+      ansible.builtin.systemd: { name: nginx, state: reloaded }
+    - name: restart docker
+      ansible.builtin.systemd: { name: docker, state: restarted }
