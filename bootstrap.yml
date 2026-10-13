@@ -130,8 +130,8 @@
         path: "/etc/letsencrypt/live/{{ cert_name }}/fullchain.pem"
       register: cert
 
-      ansible.builtin.template:
     - name: Deploy proxy vhosts (HTTP before certificate exists)
+      ansible.builtin.template:
         src: vhost.conf.j2
         dest: "/etc/nginx/sites-available/{{ item.domain }}"
         mode: "0644"
