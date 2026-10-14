@@ -23,7 +23,6 @@
           - cert_email | length > 0
           - kc_db_password | length >= 12
           - kc_admin_password | length >= 12
-          - ghcr_pat | length > 0
         fail_msg: "Missing required environment variables"
 
   tasks:
