@@ -85,10 +85,21 @@
         ctstate: [NEW]
         jump: ACCEPT
         action: insert
-        rule_num: "6"
+        rule_num: "1"
         comment: "allow tcp/{{ item }}"
       loop: ["80", "443"]
       register: fw
+
+    - name: Remove default REJECT rule (OCI Ubuntu image)
+      ansible.builtin.shell: |
+        set -e
+        REJECT_LINE=$(iptables -L INPUT -n --line-numbers | grep "REJECT.*0.0.0.0/0.*reject-with icmp-host-prohibited" | awk '{print $1}' | head -n1)
+        if [ -n "$REJECT_LINE" ]; then
+          iptables -D INPUT "$REJECT_LINE"
+        fi
+      args:
+        executable: /bin/bash
+      changed_when: false
 
     - name: Save iptables rules
       ansible.builtin.command: netfilter-persistent save
