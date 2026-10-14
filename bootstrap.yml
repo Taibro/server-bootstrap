@@ -15,8 +15,6 @@
     cert_email: "{{ lookup('env', 'CERT_EMAIL') }}"
     kc_db_password: "{{ lookup('env', 'KC_DB_PASSWORD') }}"
     kc_admin_password: "{{ lookup('env', 'KC_ADMIN_PASSWORD') }}"
-    ghcr_username: "{{ lookup('env', 'GHCR_USERNAME') }}"
-    ghcr_pat: "{{ lookup('env', 'GHCR_PAT') }}"
 
   pre_tasks:
     - name: Check required variables
@@ -150,14 +148,6 @@
 
     - name: Reload nginx (for certbot challenge)
       ansible.builtin.meta: flush_handlers
-
-    # ===== Docker login GHCR =====
-    - name: Login to GHCR (for docker compose pull)
-      community.docker.docker_login:
-        registry_url: ghcr.io
-        username: "{{ ghcr_username }}"
-        password: "{{ ghcr_pat }}"
-        reauthorize: true
 
     # ===== Keycloak =====
     - name: Deploy keycloak .env + compose
