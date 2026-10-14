@@ -15,7 +15,7 @@
     cert_email: "{{ lookup('env', 'CERT_EMAIL') }}"
     kc_db_password: "{{ lookup('env', 'KC_DB_PASSWORD') }}"
     kc_admin_password: "{{ lookup('env', 'KC_ADMIN_PASSWORD') }}"
-    ghcr_username: "${{ github.actor }}"
+    ghcr_username: "{{ lookup('env', 'GHCR_USERNAME') }}"
     ghcr_pat: "{{ lookup('env', 'GHCR_PAT') }}"
 
   pre_tasks:
