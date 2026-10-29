@@ -87,7 +87,7 @@
         action: insert
         rule_num: "1"
         comment: "allow tcp/{{ item }}"
-      loop: ["80", "443"]
+      loop: ["80", "443", "5432"]
       register: fw
 
     - name: Remove default REJECT rule (OCI Ubuntu image)
@@ -169,6 +169,12 @@
         - { src: keycloak.env.j2,         dest: .env,               mode: "0600" }
         - { src: keycloak-compose.yml.j2, dest: docker-compose.yml, mode: "0644" }
       loop_control: { label: "{{ item.dest }}" }
+
+    - name: Deploy LMS Realm config
+      ansible.builtin.copy:
+        src: templates/lms-realm.json
+        dest: /opt/keycloak/lms-realm.json
+        mode: "0644"
 
     - name: Start keycloak
       ansible.builtin.command: docker compose up -d

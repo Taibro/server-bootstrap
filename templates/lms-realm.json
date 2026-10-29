@@ -1,0 +1,296 @@
+{
+  "id": "lms",
+  "realm": "lms",
+  "displayName": "EduSpace LMS Multi-Tenant SSO",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "registrationEmailAsUsername": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "offlineSessionIdleTimeout": 2592000,
+  "attributes": {
+    "userProfileEnabled": "true"
+  },
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false}],\"groups\":[{\"name\":\"user-metadata\",\"displayHeader\":\"User metadata\",\"displayDescription\":\"Attributes, which refer to user metadata\"}],\"unmanagedAttributePolicy\":\"ENABLED\"}"
+          ]
+        }
+      }
+    ]
+  },
+  "roles": {
+    "realm": [
+      { "name": "SAAS_ADMIN", "description": "Quản trị viên toàn hệ thống SaaS" },
+      { "name": "SCHOOL_ADMIN", "description": "Quản trị viên nhà trường" },
+      { "name": "LECTURER", "description": "Giảng viên" },
+      { "name": "STUDENT", "description": "Sinh viên / Học sinh" },
+      { "name": "DEAN_OF_FACULTY", "description": "Trưởng khoa" },
+      { "name": "DEAN_OF_DEPARTMENT", "description": "Chủ nhiệm bộ môn" }
+    ]
+  },
+  "clientScopes": [
+    {
+      "name": "lms-tenant-scope",
+      "description": "Đính kèm thông tin Multi-tenant (email, school_id, school_code, user_code) và Audience vào JWT",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "email-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "email",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "email",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "school-id-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "school_id",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "school_id",
+            "jsonType.label": "int"
+          }
+        },
+        {
+          "name": "school-code-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "school_code",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "school_code",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "user-code-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "user_code",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "user_code",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "lms-api-audience-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "lms-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "realm-roles-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "lms-api",
+      "name": "LMS Laravel Resource Server",
+      "enabled": true,
+      "bearerOnly": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    },
+    {
+      "clientId": "lms-mobile",
+      "name": "LMS Flutter Mobile App (PKCE)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "vn.vnic.lms://oauth/callback",
+        "com.example.learning_management_app://oauth/callback"
+      ],
+      "webOrigins": [
+        "+"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "vn.vnic.lms://oauth/logout##com.example.learning_management_app://oauth/logout"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "profile",
+        "roles",
+        "email",
+        "lms-tenant-scope"
+      ],
+      "optionalClientScopes": [
+        "offline_access"
+      ]
+    },
+    {
+      "clientId": "lms-web",
+      "name": "LMS React Web SPA (PKCE)",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "https://lms-vnic.netlify.app/*",
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": [
+        "https://lms-vnic.netlify.app",
+        "http://localhost:5173"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "https://lms-vnic.netlify.app/*##http://localhost:5173/*"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "profile",
+        "roles",
+        "email",
+        "lms-tenant-scope"
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "sa001",
+      "email": "superadmin@edusaas.io",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Super",
+      "lastName": "Admin",
+      "attributes": {
+        "school_id": ["0"],
+        "school_code": ["SAAS"],
+        "user_code": ["SA001"]
+      },
+      "realmRoles": ["SAAS_ADMIN"],
+      "credentials": [
+        { "type": "password", "value": "SuperAdmin@2024", "temporary": false }
+      ]
+    },
+    {
+      "username": "ad_huit_01",
+      "email": "admin@huit.edu.vn",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Quản Trị",
+      "lastName": "HUIT",
+      "attributes": {
+        "school_id": ["1"],
+        "school_code": ["HUIT"],
+        "user_code": ["AD_HUIT_01"]
+      },
+      "realmRoles": ["SCHOOL_ADMIN"],
+      "credentials": [
+        { "type": "password", "value": "Admin@123", "temporary": false }
+      ]
+    },
+    {
+      "username": "ad_hcmut_01",
+      "email": "admin@hcmut.edu.vn",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Quản Trị",
+      "lastName": "HCMUT",
+      "attributes": {
+        "school_id": ["2"],
+        "school_code": ["HCMUT"],
+        "user_code": ["AD_HCMUT_01"]
+      },
+      "realmRoles": ["SCHOOL_ADMIN"],
+      "credentials": [
+        { "type": "password", "value": "Admin@123", "temporary": false }
+      ]
+    },
+    {
+      "username": "gv001",
+      "email": "nguyenvana@huit.edu.vn",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Văn A",
+      "lastName": "Nguyễn",
+      "attributes": {
+        "school_id": ["1"],
+        "school_code": ["HUIT"],
+        "user_code": ["GV001"]
+      },
+      "realmRoles": ["LECTURER"],
+      "credentials": [
+        { "type": "password", "value": "Lecturer@123", "temporary": false }
+      ]
+    },
+    {
+      "username": "2001230773",
+      "email": "ntai8448@gmail.com",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Thành Tài",
+      "lastName": "Nguyễn",
+      "attributes": {
+        "school_id": ["1"],
+        "school_code": ["HUIT"],
+        "user_code": ["2001230773"]
+      },
+      "realmRoles": ["STUDENT"],
+      "credentials": [
+        { "type": "password", "value": "Student@123", "temporary": false }
+      ]
+    }
+  ]
+}

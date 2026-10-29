@@ -20,7 +20,9 @@ services:
     image: quay.io/keycloak/keycloak:26.5.4
     container_name: keycloak_server
     restart: unless-stopped
-    command: ["start"]
+    command: ["start", "--import-realm"]
+    volumes:
+      - ./lms-realm.json:/opt/keycloak/data/import/lms-realm.json:ro
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloak_db:5432/keycloak
