@@ -155,14 +155,14 @@
       "serviceAccountsEnabled": false,
       "redirectUris": [
         "vn.vnic.lms://oauth/callback",
-        "com.example.learning_management_app://oauth/callback"
+        "com.example.learning-management-app://oauth/callback"
       ],
       "webOrigins": [
         "+"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",
-        "post.logout.redirect.uris": "vn.vnic.lms://oauth/logout##com.example.learning_management_app://oauth/logout"
+        "post.logout.redirect.uris": "vn.vnic.lms://oauth/logout##com.example.learning-management-app://oauth/logout"
       },
       "defaultClientScopes": [
         "web-origins",
