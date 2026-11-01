@@ -8,6 +8,7 @@
       - { domain: "lms-dev-api.duckdns.org",  port: 8081 }
       - { domain: "agrichain-dev-api.duckdns.org", port: 8082 }
       - { domain: "auth-dev-api.duckdns.org",     port: 8080 }
+      - { domain: "ogani-demo-hosting.duckdns.org", port: 8083 }
     auth_domain: "auth-dev-api.duckdns.org"
     cert_name: "{{ domains[0].domain }}"
     cert_domain_args: "{{ domains | map(attribute='domain') | map('regex_replace', '^', '-d ') | join(' ') }}"
@@ -121,6 +122,7 @@
         - { path: /opt/keycloak }
         - { path: /opt/lms,       owner: "{{ deploy_user }}" }
         - { path: /opt/agrichain, owner: "{{ deploy_user }}" }
+        - { path: /opt/ogani,     owner: "{{ deploy_user }}" }
         - { path: /opt/backups,   owner: "{{ deploy_user }}" }
         - { path: /var/www/certbot }
       loop_control: { label: "{{ item.path }}" }
@@ -195,11 +197,10 @@
     - name: Issue Let's Encrypt SAN certificate (webroot)
       ansible.builtin.command: >
         certbot certonly --webroot -w /var/www/certbot -n --agree-tos
+        --expand --keep-until-expiring
         -m {{ cert_email }} --cert-name {{ cert_name }}
         --deploy-hook "systemctl reload nginx"
         {{ cert_domain_args }}
-      args:
-        creates: "/etc/letsencrypt/live/{{ cert_name }}/fullchain.pem"
 
     - name: Deploy HTTPS vhosts
       ansible.builtin.template:
