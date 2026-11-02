@@ -172,11 +172,12 @@
         - { src: keycloak-compose.yml.j2, dest: docker-compose.yml, mode: "0644" }
       loop_control: { label: "{{ item.dest }}" }
 
-    - name: Deploy LMS Realm config
+    - name: Copy LMS realm JSON for auto-import
       ansible.builtin.copy:
         src: templates/lms-realm.json
         dest: /opt/keycloak/lms-realm.json
         mode: "0644"
+      notify: restart keycloak
 
     - name: Start keycloak
       ansible.builtin.command: docker compose up -d
@@ -232,3 +233,6 @@
       ansible.builtin.systemd: { name: nginx, state: reloaded }
     - name: restart docker
       ansible.builtin.systemd: { name: docker, state: restarted }
+    - name: restart keycloak
+      ansible.builtin.command: docker compose restart keycloak
+      args: { chdir: /opt/keycloak }
