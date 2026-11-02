@@ -32,12 +32,30 @@
   },
   "roles": {
     "realm": [
-      { "name": "SAAS_ADMIN", "description": "Quản trị viên toàn hệ thống SaaS" },
-      { "name": "SCHOOL_ADMIN", "description": "Quản trị viên nhà trường" },
-      { "name": "LECTURER", "description": "Giảng viên" },
-      { "name": "STUDENT", "description": "Sinh viên / Học sinh" },
-      { "name": "DEAN_OF_FACULTY", "description": "Trưởng khoa" },
-      { "name": "DEAN_OF_DEPARTMENT", "description": "Chủ nhiệm bộ môn" }
+      {
+        "name": "SAAS_ADMIN",
+        "description": "Quản trị viên toàn hệ thống SaaS"
+      },
+      {
+        "name": "SCHOOL_ADMIN",
+        "description": "Quản trị viên nhà trường"
+      },
+      {
+        "name": "LECTURER",
+        "description": "Giảng viên"
+      },
+      {
+        "name": "STUDENT",
+        "description": "Sinh viên / Học sinh"
+      },
+      {
+        "name": "DEAN_OF_FACULTY",
+        "description": "Trưởng khoa"
+      },
+      {
+        "name": "DEAN_OF_DEPARTMENT",
+        "description": "Chủ nhiệm bộ môn"
+      }
     ]
   },
   "clientScopes": [
@@ -142,7 +160,7 @@
       "bearerOnly": true,
       "publicClient": false,
       "standardFlowEnabled": false,
-      "directAccessGrantsEnabled": false
+      "directAccessGrantsEnabled": true
     },
     {
       "clientId": "lms-mobile",
@@ -215,13 +233,25 @@
       "firstName": "Super",
       "lastName": "Admin",
       "attributes": {
-        "school_id": ["0"],
-        "school_code": ["SAAS"],
-        "user_code": ["SA001"]
+        "school_id": [
+          "0"
+        ],
+        "school_code": [
+          "SAAS"
+        ],
+        "user_code": [
+          "SA001"
+        ]
       },
-      "realmRoles": ["SAAS_ADMIN"],
+      "realmRoles": [
+        "SAAS_ADMIN"
+      ],
       "credentials": [
-        { "type": "password", "value": "SuperAdmin@2024", "temporary": false }
+        {
+          "type": "password",
+          "value": "SuperAdmin@2024",
+          "temporary": false
+        }
       ]
     },
     {
@@ -232,13 +262,25 @@
       "firstName": "Quản Trị",
       "lastName": "HUIT",
       "attributes": {
-        "school_id": ["1"],
-        "school_code": ["HUIT"],
-        "user_code": ["AD_HUIT_01"]
+        "school_id": [
+          "1"
+        ],
+        "school_code": [
+          "HUIT"
+        ],
+        "user_code": [
+          "AD_HUIT_01"
+        ]
       },
-      "realmRoles": ["SCHOOL_ADMIN"],
+      "realmRoles": [
+        "SCHOOL_ADMIN"
+      ],
       "credentials": [
-        { "type": "password", "value": "Admin@123", "temporary": false }
+        {
+          "type": "password",
+          "value": "Admin@123",
+          "temporary": false
+        }
       ]
     },
     {
@@ -249,13 +291,25 @@
       "firstName": "Quản Trị",
       "lastName": "HCMUT",
       "attributes": {
-        "school_id": ["2"],
-        "school_code": ["HCMUT"],
-        "user_code": ["AD_HCMUT_01"]
+        "school_id": [
+          "2"
+        ],
+        "school_code": [
+          "HCMUT"
+        ],
+        "user_code": [
+          "AD_HCMUT_01"
+        ]
       },
-      "realmRoles": ["SCHOOL_ADMIN"],
+      "realmRoles": [
+        "SCHOOL_ADMIN"
+      ],
       "credentials": [
-        { "type": "password", "value": "Admin@123", "temporary": false }
+        {
+          "type": "password",
+          "value": "Admin@123",
+          "temporary": false
+        }
       ]
     },
     {
@@ -266,13 +320,25 @@
       "firstName": "Văn A",
       "lastName": "Nguyễn",
       "attributes": {
-        "school_id": ["1"],
-        "school_code": ["HUIT"],
-        "user_code": ["GV001"]
+        "school_id": [
+          "1"
+        ],
+        "school_code": [
+          "HUIT"
+        ],
+        "user_code": [
+          "GV001"
+        ]
       },
-      "realmRoles": ["LECTURER"],
+      "realmRoles": [
+        "LECTURER"
+      ],
       "credentials": [
-        { "type": "password", "value": "Lecturer@123", "temporary": false }
+        {
+          "type": "password",
+          "value": "Lecturer@123",
+          "temporary": false
+        }
       ]
     },
     {
@@ -283,13 +349,25 @@
       "firstName": "Thành Tài",
       "lastName": "Nguyễn",
       "attributes": {
-        "school_id": ["1"],
-        "school_code": ["HUIT"],
-        "user_code": ["2001230773"]
+        "school_id": [
+          "1"
+        ],
+        "school_code": [
+          "HUIT"
+        ],
+        "user_code": [
+          "2001230773"
+        ]
       },
-      "realmRoles": ["STUDENT"],
+      "realmRoles": [
+        "STUDENT"
+      ],
       "credentials": [
-        { "type": "password", "value": "Student@123", "temporary": false }
+        {
+          "type": "password",
+          "value": "Student@123",
+          "temporary": false
+        }
       ]
     }
   ]
